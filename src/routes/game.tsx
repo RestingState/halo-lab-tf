@@ -11,7 +11,7 @@ export default function Game() {
         <h1 className="text-center text-2xl">Now it's your turn</h1>
         <div className="grid h-[90%] grid-cols-[1fr_2fr] gap-5">
           <Chat />
-          <PlayingField />
+          <PlayingWindow />
         </div>
       </div>
     </main>
@@ -154,16 +154,36 @@ const MovementButton = ({ src, className }: MovementButtonProps) => {
   )
 }
 
-function PlayingField() {
+const board: ('w' | 'p' | 'h' | 'u')[] = Array.from(
+  { length: 64 },
+  (_, i) => 'h'
+)
+board[22] = 'u'
+board[21] = 'w'
+board[14] = 'w'
+board[23] = 'p'
+
+function PlayingWindow() {
   const [activeLeaveBtn, setActiveLeaveButton] = useState<'Give up' | 'Exit'>(
     'Give up'
   )
 
+  const getCellColor = (cellIdx: number) => {
+    const cellType = board[cellIdx]
+    if (cellType === 'w') return 'slate-500'
+    if (cellType === 'p') return 'slate-50'
+    if (cellType === 'h') return 'slate-200'
+    if (cellType === 'u') return 'green-200'
+  }
+
   return (
     <div className="flex h-full flex-col justify-between">
       <div className="grid h-[80%] grid-cols-[repeat(8,min-content)] grid-rows-[repeat(8,min-content)] place-content-center gap-2">
-        {Array.from({ length: 64 }, (_, i) => i).map((idx) => (
-          <div className="h-10 w-10 border" key={idx}></div>
+        {board.map((_, idx) => (
+          <div
+            className={`h-10 w-10 border bg-${getCellColor(idx)}`}
+            key={idx}
+          ></div>
         ))}
       </div>
       <div className="relative">
