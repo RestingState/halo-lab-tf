@@ -1,3 +1,9 @@
+import upArrowSrc from '~/assets/svg/up_arrow.svg'
+import rightArrowSrc from '~/assets/svg/right_arrow.svg'
+import downArrowSrc from '~/assets/svg/down_arrow.svg'
+import leftArrowSrc from '~/assets/svg/left_arrow.svg'
+import { useState } from 'react'
+
 export default function Game() {
   return (
     <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
@@ -135,6 +141,54 @@ function Chat() {
   )
 }
 
+type MovementButtonProps = {
+  src: string
+  className?: string
+}
+
+const MovementButton = ({ src, className }: MovementButtonProps) => {
+  return (
+    <button className={`btn btn-blue ${className}`}>
+      <img className="h-6 w-6" src={src} />
+    </button>
+  )
+}
+
 function PlayingField() {
-  return <div className="h-full bg-green-200"></div>
+  const [activeLeaveBtn, setActiveLeaveButton] = useState<'Give up' | 'Exit'>(
+    'Give up'
+  )
+
+  return (
+    <div className="flex h-full flex-col justify-between">
+      <div className="grid h-[80%] grid-cols-[repeat(8,min-content)] grid-rows-[repeat(8,min-content)] place-content-center gap-2">
+        {Array.from({ length: 64 }, (_, i) => i).map((idx) => (
+          <div className="h-10 w-10 border" key={idx}></div>
+        ))}
+      </div>
+      <div className="relative">
+        <div className="flex justify-center">
+          <div className="grid grid-cols-[repeat(3,max-content)] gap-2">
+            <div />
+            <MovementButton src={upArrowSrc} />
+            <div />
+            <MovementButton src={leftArrowSrc} />
+            <MovementButton src={downArrowSrc} />
+            <MovementButton src={rightArrowSrc} />
+          </div>
+        </div>
+        <div className="absolute bottom-0 right-0 flex gap-5">
+          <button className="btn btn-red" disabled={activeLeaveBtn === 'Exit'}>
+            Give up
+          </button>
+          <button
+            className="btn btn-red"
+            disabled={activeLeaveBtn === 'Give up'}
+          >
+            Exit
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
