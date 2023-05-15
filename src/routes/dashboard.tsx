@@ -1,7 +1,13 @@
-import useUser from '~/hooks/useUser'
-import { ChangeEvent, useState } from 'react'
-import { FormEvent } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useAtom } from 'jotai'
+import { useState } from 'react'
+import { SubmitHandler, useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { signin, signup } from '~/api/auth-api'
+import { userAtom } from '~/atoms'
+import { useMutation } from '@tanstack/react-query'
+import axios, { AxiosError } from 'axios'
+import { setItemToLocalStorage } from '~/lib/local-storage'
 
 const games = [
   { id: 1, username: 'Alex', date: '2023-05-22 15:16:45' },
@@ -25,9 +31,9 @@ const games = [
 const cell = 'px-12 py-2 border'
 
 export default function Dashboard() {
-  const { isAuthed } = useUser()
+  const [user] = useAtom(userAtom)
 
-  if (!isAuthed) {
+  if (!user.isAuthed) {
     return <AuthModal />
   }
 
@@ -63,59 +69,75 @@ export default function Dashboard() {
   )
 }
 
-const noFormErrors = {
-  username: '',
-  password: '',
-}
+const formSchema = z.object({
+  username: z
+    .string()
+    .min(4, 'username must contain at least 4 characters')
+    .max(12, 'username must contain at most 12 characters'),
+  password: z
+    .string()
+    .min(8, 'password must contain at least 8 characters')
+    .max(32, 'password must contain at most 32 characters'),
+})
+
+type FormSchemaType = z.infer<typeof formSchema>
 
 function AuthModal() {
-  const [formValues, setFormValues] = useState({ username: '', password: '' })
   const [type, setType] = useState<'sign in' | 'registration'>('sign in')
-  const [formErrors, setFormErrors] = useState(noFormErrors)
+  const [error, setError] = useState('')
 
-  const onFormChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setFormValues({ ...formValues, [e.target.name]: e.target.value })
+  const [, setUser] = useAtom(userAtom)
+  const signinMutation = useMutation({
+    mutationFn: signin,
+    onSuccess: (data) => {
+      setUser({ ...data.data, isAuthed: true })
+      setItemToLocalStorage('maze-user', data.data)
+    },
+    onError: (error: Error | AxiosError) => {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 400) {
+          setError(error.response.data.message)
+          return
+        }
+      }
+      setError('Server error. Try again later')
+    },
+  })
+  const signupMutation = useMutation({
+    mutationFn: signup,
+    onSuccess: (data) => {
+      setUser({ ...data.data, isAuthed: true })
+      setItemToLocalStorage('maze-user', data.data)
+    },
+    onError: (error: Error | AxiosError) => {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 400) {
+          setError(error.response.data.message)
+        }
+      }
+      setError('Server error. Try again later')
+    },
+  })
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormSchemaType>({
+    resolver: zodResolver(formSchema),
+  })
+
+  const onSubmit: SubmitHandler<FormSchemaType> = async (data) => {
+    if (type === 'sign in') {
+      signinMutation.mutate(data)
+    } else {
+      signupMutation.mutate(data)
+    }
   }
-  console.log(formErrors)
 
   const onTypeChange = () => {
     if (type === 'sign in') setType('registration')
     else setType('sign in')
-  }
-
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-    try {
-      e.preventDefault()
-
-      const values = z
-        .object({
-          username: z
-            .string()
-            .min(4, 'username must contain at least 4 character(s)')
-            .max(12, 'username must contain at most 12 character(s)'),
-          password: z
-            .string()
-            .min(8, 'password must contain at least 8 character(s)')
-            .max(32, 'password must contain at most 32 character(s)'),
-        })
-        .parse(formValues)
-
-      setFormErrors({ ...noFormErrors })
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newFormErrors = { ...noFormErrors }
-
-        error.issues.forEach((issue) => {
-          if (issue.path[0] === 'username') {
-            newFormErrors.username = issue.message
-          } else if (issue.path[0] === 'password') {
-            newFormErrors.password = issue.message
-          }
-        })
-
-        setFormErrors(newFormErrors)
-      }
-    }
   }
 
   return (
@@ -129,7 +151,7 @@ function AuthModal() {
             <h3 className="mb-4 text-center text-xl font-medium text-gray-900">
               {type === 'sign in' ? 'Sign in' : 'Registration'}
             </h3>
-            <form className="space-y-6" action="#" onSubmit={onSubmit}>
+            <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               <div>
                 <label
                   htmlFor="username"
@@ -139,16 +161,13 @@ function AuthModal() {
                 </label>
                 <input
                   type="username"
-                  name="username"
                   id="username"
-                  value={formValues.username}
-                  onChange={onFormChange}
                   className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Blueberry"
-                  required
+                  placeholder="blueberry"
+                  {...register('username')}
                 />
-                {formErrors.username && (
-                  <div className="err-msg">{formErrors.username}</div>
+                {errors.username && (
+                  <div className="err-msg">{errors.username.message}</div>
                 )}
               </div>
               <div>
@@ -160,33 +179,35 @@ function AuthModal() {
                 </label>
                 <input
                   type="password"
-                  name="password"
                   id="password"
-                  value={formValues.password}
-                  onChange={onFormChange}
                   placeholder="••••••••"
                   className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
-                  required
+                  {...register('password')}
                 />
-                {formErrors.password && (
-                  <div className="err-msg">{formErrors.password}</div>
+                {errors.password && (
+                  <div className="err-msg">{errors.password.message}</div>
                 )}
               </div>
+              {error && <div className="err-msg text-center">{error}</div>}
 
-              <button type="submit" className="btn btn-blue mx-auto block">
+              <button
+                type="submit"
+                className="btn btn-blue mx-auto block"
+                disabled={signinMutation.isLoading || signupMutation.isLoading}
+              >
                 {type === 'sign in' ? 'Login to your account' : 'Sign up'}
               </button>
+
               <div className="text-sm font-medium text-gray-500">
                 {type === 'sign in'
                   ? 'Not registered? '
                   : 'Already have an account? '}
-                <a
+                <span
                   onClick={onTypeChange}
-                  href="#"
-                  className="text-blue-700 hover:underline"
+                  className="cursor-pointer text-blue-700 hover:underline"
                 >
                   {type === 'sign in' ? 'Create account' : 'Sign in'}
-                </a>
+                </span>
               </div>
             </form>
           </div>
