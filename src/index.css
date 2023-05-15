@@ -25,3 +25,7 @@ body {
 .btn-red:hover {
   @apply enabled:bg-red-700;
 }
+
+.err-msg {
+  @apply text-sm text-red-700;
+}
