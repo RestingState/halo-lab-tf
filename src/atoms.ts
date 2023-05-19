@@ -1,14 +1,6 @@
 import { atom } from 'jotai'
-import { getItemFromLocalStorage } from './lib/local-storage'
+import { UserLocalStorage, getItemFromLocalStorage } from './lib/local-storage'
 
-type User = {
-  user: {
-    id: number
-    username: string
-  }
-  token: string
-}
-type UserLocalStorage = null | User
 const userFromLocalStorage: UserLocalStorage =
   getItemFromLocalStorage('maze-user')
 

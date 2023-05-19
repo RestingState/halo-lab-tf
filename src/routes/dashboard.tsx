@@ -5,28 +5,11 @@ import { SubmitHandler, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { signin, signup } from '~/api/auth-api'
 import { userAtom } from '~/atoms'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import axios, { AxiosError } from 'axios'
-import { setItemToLocalStorage } from '~/lib/local-storage'
-
-const games = [
-  { id: 1, username: 'Alex', date: '2023-05-22 15:16:45' },
-  { id: 2, username: 'Denys', date: '2023-05-22 15:16:45' },
-  { id: 3, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  { id: 4, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  { id: 5, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  { id: 6, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  { id: 7, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  { id: 8, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  { id: 9, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  {
-    id: 10,
-    username: 'Augustin Porebryk',
-    date: '2023-05-22 15:16:45',
-  },
-  { id: 11, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-  { id: 12, username: 'Augustin Porebryk', date: '2023-05-22 15:16:45' },
-]
+import { getAllGamesForWaitingList } from '~/api/game-api'
+import Loader from '~/components/loader'
+import useUser from '~/hooks/useUser'
 
 const cell = 'px-12 py-2 border'
 
@@ -41,31 +24,61 @@ export default function Dashboard() {
     <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
       <div className="flex max-h-[60%] max-w-xl flex-col gap-5 bg-slate-50 p-10 py-5">
         <h1 className="text-center text-2xl">Hello, &#60;username&#62;</h1>
-        {games.length === 0 ? (
-          <p>No games were found. Create one yourself!</p>
-        ) : (
-          <div className="overflow-y-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr>
-                  <th className={cell}>Datetime</th>
-                  <th className={cell}>Username</th>
-                </tr>
-              </thead>
-              <tbody>
-                {games.map(({ id, username, date }) => (
-                  <tr key={id} className="cursor-pointer hover:bg-slate-100">
-                    <td className={cell}>{date}</td>
-                    <td className={cell}>{username}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <GameList />
         <button className="btn btn-blue">New game</button>
       </div>
     </main>
+  )
+}
+
+function GameList() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['waitingList'],
+    queryFn: () => getAllGamesForWaitingList({ status: 'pending' }),
+  })
+
+  if (isLoading)
+    return (
+      <div className="flex justify-center px-32 py-5">
+        <Loader size={100} />
+      </div>
+    )
+
+  if (isError || !data)
+    return (
+      <div className="p-10 text-xl text-red-700">
+        Error. Please try again later
+      </div>
+    )
+
+  return (
+    <>
+      {data.length === 0 ? (
+        <p>No games were found. Create one yourself!</p>
+      ) : (
+        <div className="overflow-y-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr>
+                <th className={cell}>Datetime</th>
+                <th className={cell}>Username</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map(({ id, createdAt, creator }) => {
+                const date = new Date(createdAt)
+                return (
+                  <tr key={id} className="cursor-pointer hover:bg-slate-100">
+                    <td className={cell}>{date.toLocaleString()}</td>
+                    <td className={cell}>{creator.username}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -86,12 +99,11 @@ function AuthModal() {
   const [type, setType] = useState<'sign in' | 'registration'>('sign in')
   const [error, setError] = useState('')
 
-  const [, setUser] = useAtom(userAtom)
+  const { handleSetUser } = useUser()
   const signinMutation = useMutation({
     mutationFn: signin,
     onSuccess: (data) => {
-      setUser({ ...data.data, isAuthed: true })
-      setItemToLocalStorage('maze-user', data.data)
+      handleSetUser(data.data)
     },
     onError: (error: Error | AxiosError) => {
       if (axios.isAxiosError(error)) {
@@ -106,8 +118,7 @@ function AuthModal() {
   const signupMutation = useMutation({
     mutationFn: signup,
     onSuccess: (data) => {
-      setUser({ ...data.data, isAuthed: true })
-      setItemToLocalStorage('maze-user', data.data)
+      handleSetUser(data.data)
     },
     onError: (error: Error | AxiosError) => {
       if (axios.isAxiosError(error)) {

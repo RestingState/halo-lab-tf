@@ -1,5 +1,13 @@
 type Key = 'maze-user'
 
+export type UserLocalStorage = null | {
+  user: {
+    id: number
+    username: string
+  }
+  token: string
+}
+
 export const getItemFromLocalStorage = (key: Key) =>
   JSON.parse(localStorage.getItem(key) as string)
 
