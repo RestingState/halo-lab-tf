@@ -2,14 +2,14 @@ import upArrowSrc from '~/assets/svg/up_arrow.svg'
 import rightArrowSrc from '~/assets/svg/right_arrow.svg'
 import downArrowSrc from '~/assets/svg/down_arrow.svg'
 import leftArrowSrc from '~/assets/svg/left_arrow.svg'
-import { ComponentPropsWithoutRef, useEffect, useState } from 'react'
+import { ComponentPropsWithoutRef, FormEvent, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getGameForPlay } from '~/api/game-api'
+import { getChatMessages, getGameForPlay } from '~/api/game-api'
 import useUser from '~/hooks/useUser'
 import { useNavigate, useParams } from 'react-router-dom'
 import Loader from '~/components/loader'
 import { SERVER_ERROR } from '~/constants'
-import socket from '~/api/socket'
+import socket, { ReceiveMessageReceivedResponse } from '~/api/socket'
 import { Direction } from '~/type'
 import { toast } from 'react-toastify'
 import ConfirmToast from '~/components/confirm-toast'
@@ -42,6 +42,12 @@ export default function Game() {
       socket.off('gameFinished', handleGameFinish)
     }
   }, [queryClient])
+
+  useEffect(() => {
+    socket.emit('joinGameRoom', { gameId: +(gameId as string) }, () =>
+      toast.error(SERVER_ERROR)
+    )
+  }, [gameId])
 
   const handleMove = (direction: Direction) => {
     socket.emit(
@@ -104,124 +110,96 @@ export default function Game() {
   )
 }
 
-const messages = [
-  {
-    id: 1,
-    message: 'Hello, how are you?',
-    user: {
-      username: 'Alex',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 2,
-    message: 'd',
-    user: {
-      username: 'Augustin Porebryk',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 3,
-    message:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. In lacus leo, commodo non mauris at, consectetur blandit est.',
-    user: {
-      username: 'Vafla',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 4,
-    message:
-      'Nullam molestie consectetur feugiat. Duis molestie elit vel nunc congue hendrerit.',
-    user: {
-      username: 'Denji Banana',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 5,
-    message: 'Mauris ullamcorper',
-    user: {
-      username: 'Dijego Maradonna',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 6,
-    message: 'Mauris ullamcorper',
-    user: {
-      username: 'Dijego Maradonna',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 7,
-    message: 'Mauris ullamcorper',
-    user: {
-      username: 'Dijego Maradonna',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 8,
-    message: 'Mauris ullamcorper',
-    user: {
-      username: 'Dijego Maradonna',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 9,
-    message:
-      'Nullam molestie consectetur feugiat. Duis molestie elit vel nunc congue hendrerit',
-    user: {
-      username: 'Dijego Maradonna',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-  {
-    id: 10,
-    message:
-      'Nullam molestie consectetur feugiat. Duis molestie elit vel nunc congue hendrerit',
-    user: {
-      username: 'Dijego Maradonna',
-    },
-    date: '2023-05-22 15:16:45',
-  },
-]
-
 function Chat() {
+  const { gameId } = useParams()
+  const { user } = useUser()
+  const queryClient = useQueryClient()
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['chatMessages'],
+    queryFn: () => getChatMessages(+(gameId as string)),
+  })
+  const [text, setText] = useState('')
+
+  useEffect(() => {
+    const handleMessageReceive = (message: ReceiveMessageReceivedResponse) => {
+      // TODO: remove any
+      queryClient.setQueryData(['chatMessages'], (oldData: any) =>
+        oldData ? [...oldData, message] : oldData
+      )
+    }
+
+    socket.on('messageReceived', handleMessageReceive)
+
+    return () => {
+      socket.off('messageReceived', handleMessageReceive)
+    }
+  }, [queryClient])
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    socket.emit(
+      'sendMessage',
+      {
+        userId: user.user!.id,
+        gameId: +(gameId as string),
+        text,
+      },
+      () => toast.error(SERVER_ERROR)
+    )
+    setText('')
+  }
+
+  const getTimeString = (date: Date) => {
+    const hours =
+      date.getHours() < 10 ? `0${date.getHours()}` : `${date.getHours()}`
+    const minutes =
+      date.getMinutes() < 10 ? `0${date.getMinutes()}` : `${date.getMinutes()}`
+    const seconds =
+      date.getSeconds() < 10 ? `0${date.getSeconds()}` : `${date.getSeconds()}`
+
+    return `${hours}:${minutes}:${seconds}`
+  }
+
   return (
     <div className="flex h-full flex-col gap-5">
       <div className="relative grow rounded-md border">
         <div className="absolute inset-0 flex h-full flex-col-reverse gap-2 overflow-y-auto p-2">
-          {messages.map(({ id, message, date, user }) => {
-            const datetime = new Date(date)
-            return (
-              <div
-                key={id}
-                className="grid grid-cols-[max-content_100px_2fr] gap-2"
-              >
-                <div>
-                  {`${datetime.getHours()}:${datetime.getMinutes()}:${datetime.getSeconds()}`}
+          {isLoading ? (
+            <div className="flex justify-center">
+              <Loader size={50} />
+            </div>
+          ) : isError || !data ? (
+            <div className="text-center text-red-700">{SERVER_ERROR}</div>
+          ) : (
+            [...data].reverse().map(({ id, text, createdAt, user }) => {
+              const timeString = getTimeString(new Date(createdAt))
+              return (
+                <div
+                  key={id}
+                  className="grid grid-cols-[max-content_100px_2fr] gap-2"
+                >
+                  <div>{timeString}</div>
+                  <div className="truncate">{`${user.username}:`}</div>
+                  <div>{text}</div>
                 </div>
-                <div className="truncate">{`${user.username}:`}</div>
-                <div>{message}</div>
-              </div>
-            )
-          })}
+              )
+            })
+          )}
         </div>
       </div>
-      <form className="flex gap-5">
+      <form className="flex gap-5" onSubmit={onSubmit}>
         <input
           type="text"
-          id="first_name"
+          id="text"
           className="block w-full border bg-gray-100 p-2.5 text-sm focus:outline-0"
           placeholder="Type your message here"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
           required
         />
-        <button className="btn btn-blue">Send</button>
+        <button className="btn btn-blue" type="submit">
+          Send
+        </button>
       </form>
     </div>
   )

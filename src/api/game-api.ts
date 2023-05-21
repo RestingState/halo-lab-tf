@@ -43,6 +43,22 @@ export async function getGameForPlay({
           gameFinished: true
           youWon: boolean
         }
-    >(`/game/${gameId}/${userId}`)
+    >(`/game/${gameId}/user/${userId}`)
+  ).data
+}
+
+export async function getChatMessages(gameId: number) {
+  return (
+    await axiosApi.get<
+      {
+        user: {
+          id: number
+          username: string
+        }
+        id: number
+        text: string
+        createdAt: Date
+      }[]
+    >(`/game/${gameId}/chat_messages`)
   ).data
 }
