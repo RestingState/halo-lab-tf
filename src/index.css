@@ -19,6 +19,12 @@ body {
 .btn-blue:hover {
   @apply enabled:bg-blue-700;
 }
+.btn-blue-outline {
+  @apply border border-blue-500 text-blue-500;
+}
+.btn-blue-outline:hover {
+  @apply enabled:bg-blue-100;
+}
 .btn-red {
   @apply bg-red-500 text-white;
 }

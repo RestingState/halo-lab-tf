@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
-import { Outlet, redirect } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { axiosApi } from '~/api/axios'
+import socket from '~/api/socket'
 import useUser from '~/hooks/useUser'
 
 export default function Root() {
-  const { handleClearUser } = useUser()
+  const { user, handleClearUser } = useUser()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const responseInterceptor = axiosApi.interceptors.response.use(
@@ -12,7 +14,7 @@ export default function Root() {
       (error) => {
         if (error.response.status === 401) {
           handleClearUser()
-          redirect('/dashboard')
+          navigate('/dashboard')
         }
       }
     )
@@ -20,7 +22,27 @@ export default function Root() {
     return () => {
       axiosApi.interceptors.response.eject(responseInterceptor)
     }
-  }, [handleClearUser])
+  }, [navigate, handleClearUser])
+
+  useEffect(() => {
+    if (user.isAuthed) {
+      socket.auth = { token: user.token }
+      socket.connect()
+
+      const handleGameStart = (gameId: number) => {
+        navigate(`/game/${gameId}`)
+      }
+
+      socket.on('gameStarted', handleGameStart)
+
+      return () => {
+        socket.auth = {}
+        socket.disconnect()
+
+        socket.off('gameStarted', handleGameStart)
+      }
+    }
+  }, [user, navigate])
 
   return (
     <>

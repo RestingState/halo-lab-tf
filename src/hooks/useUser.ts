@@ -16,7 +16,7 @@ export default function useUser() {
   }
 
   const handleClearUser = useCallback(() => {
-    setUser({ isAuthed: false })
+    setUser({ isAuthed: false, token: '', user: null })
     removeItemFromLocalStorage('maze-user')
   }, [setUser])
 

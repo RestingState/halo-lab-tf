@@ -1,34 +1,28 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useAtom } from 'jotai'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { signin, signup } from '~/api/auth-api'
-import { userAtom } from '~/atoms'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios, { AxiosError } from 'axios'
 import { getAllGamesForWaitingList } from '~/api/game-api'
 import Loader from '~/components/loader'
 import useUser from '~/hooks/useUser'
+import socket, { ReceiveCreatedGameResponse } from '~/api/socket'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
+import { SERVER_ERROR } from '~/constants'
 
 const cell = 'px-12 py-2 border'
 
 export default function Dashboard() {
-  const [user] = useAtom(userAtom)
+  const { user } = useUser()
 
   if (!user.isAuthed) {
     return <AuthModal />
   }
 
-  return (
-    <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
-      <div className="flex max-h-[60%] max-w-xl flex-col gap-5 bg-slate-50 p-10 py-5">
-        <h1 className="text-center text-2xl">Hello, &#60;username&#62;</h1>
-        <GameList />
-        <button className="btn btn-blue">New game</button>
-      </div>
-    </main>
-  )
+  return <GameList />
 }
 
 function GameList() {
@@ -36,48 +30,112 @@ function GameList() {
     queryKey: ['waitingList'],
     queryFn: () => getAllGamesForWaitingList({ status: 'pending' }),
   })
+  const queryClient = useQueryClient()
+  const { user } = useUser()
+  const navigate = useNavigate()
 
-  if (isLoading)
-    return (
-      <div className="flex justify-center px-32 py-5">
-        <Loader size={100} />
-      </div>
-    )
+  useEffect(() => {
+    if (user.isAuthed) {
+      const receiveCreatedGameListener = (game: ReceiveCreatedGameResponse) => {
+        // TODO: remove any
+        queryClient.setQueryData(['waitingList'], (oldData: any) =>
+          oldData ? [...oldData, game] : oldData
+        )
+      }
 
-  if (isError || !data)
-    return (
-      <div className="p-10 text-xl text-red-700">
-        Error. Please try again later
-      </div>
+      socket.on('gameCreated', receiveCreatedGameListener)
+
+      return () => {
+        socket.off('gameCreated', receiveCreatedGameListener)
+      }
+    }
+  }, [user, queryClient])
+
+  const onExistingGameClick = (gameId: number) => {
+    socket.emit(
+      'joinGame',
+      { userId: user.user?.id as number, gameId },
+      (res) => {
+        if (
+          res.error_message ===
+          'User already plays another game or waits for another game to start'
+        ) {
+          toast.error("You're already in game")
+        } else if (
+          res.error_message === 'User already waits for this game to start'
+        ) {
+          navigate(`/game/${gameId}/waiting-screen`)
+        } else if (res.error_message === 'User already plays in this game') {
+          navigate(`/game/${gameId}`)
+        } else {
+          toast.error('Server error')
+        }
+      }
     )
+  }
+
+  const onNewGameClick = () => {
+    socket.emit('createGame', (res) => {
+      if ('error_message' in res) {
+        if (
+          res.error_message ===
+          'User already plays another game or waits for another game to start'
+        ) {
+          toast.error("You're already waiting on a game start or play one")
+        } else {
+          toast.error(SERVER_ERROR)
+        }
+      } else {
+        navigate(`/game/${res.id}/waiting-screen`)
+      }
+    })
+  }
 
   return (
     <>
-      {data.length === 0 ? (
-        <p>No games were found. Create one yourself!</p>
-      ) : (
-        <div className="overflow-y-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr>
-                <th className={cell}>Datetime</th>
-                <th className={cell}>Username</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map(({ id, createdAt, creator }) => {
-                const date = new Date(createdAt)
-                return (
-                  <tr key={id} className="cursor-pointer hover:bg-slate-100">
-                    <td className={cell}>{date.toLocaleString()}</td>
-                    <td className={cell}>{creator.username}</td>
+      <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
+        <div className="flex max-h-[60%] max-w-xl flex-col gap-5 bg-slate-50 p-10 py-5">
+          <h1 className="text-center text-2xl">Hello, &#60;username&#62;</h1>
+          {isLoading ? (
+            <div className="flex justify-center px-32 py-5">
+              <Loader size={100} />
+            </div>
+          ) : isError || !data ? (
+            <div className="p-10 text-xl text-red-700">{SERVER_ERROR}</div>
+          ) : data.length === 0 ? (
+            <p>No games were found. Create one yourself!</p>
+          ) : (
+            <div className="overflow-y-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr>
+                    <th className={cell}>Datetime</th>
+                    <th className={cell}>Username</th>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {data.map(({ id, createdAt, creator }) => {
+                    const date = new Date(createdAt)
+                    return (
+                      <tr
+                        key={id}
+                        className="cursor-pointer hover:bg-slate-100"
+                        onClick={() => onExistingGameClick(id)}
+                      >
+                        <td className={cell}>{date.toLocaleString()}</td>
+                        <td className={cell}>{creator.username}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <button className="btn btn-blue" onClick={onNewGameClick}>
+            New game
+          </button>
         </div>
-      )}
+      </main>
     </>
   )
 }
