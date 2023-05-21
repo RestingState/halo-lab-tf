@@ -51,7 +51,7 @@ export default function Game() {
         gameId: +(gameId as string),
         direction,
       },
-      console.log
+      () => toast.error(SERVER_ERROR)
     )
   }
 
@@ -263,10 +263,22 @@ type ActionPanelProps =
   | { gameFinished: true }
 
 function ActionPanel(props: ActionPanelProps) {
+  const { user } = useUser()
+  const { gameId } = useParams()
   const navigate = useNavigate()
 
   const handleGiveUp = () => {
-    const confirm = () => console.log('confirm')
+    const confirm = () => {
+      socket.emit(
+        'giveUp',
+        {
+          userId: user.user!.id,
+          gameId: +(gameId as string),
+        },
+        () => toast.error(SERVER_ERROR)
+      )
+    }
+
     toast(<ConfirmToast confirm={confirm} />, {
       autoClose: false,
       position: 'bottom-center',

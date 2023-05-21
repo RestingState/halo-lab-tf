@@ -56,11 +56,24 @@ export interface ClientToServerEvents {
         | 'Server error'
     }) => void
   ) => void
+  giveUp: (
+    data: { userId: number; gameId: number },
+    cb: (res: {
+      error_message:
+        | "User with such userId doesn't exists"
+        | "Game with such gameId doesn't exists"
+        | 'Server error'
+    }) => void
+  ) => void
 }
 
 const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
   import.meta.env.VITE_SERVER_URL,
   { autoConnect: false }
 )
+
+socket.onAny((event, ...args) => {
+  console.log(event, args)
+})
 
 export default socket
