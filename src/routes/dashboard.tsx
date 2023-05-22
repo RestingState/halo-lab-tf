@@ -184,6 +184,7 @@ function AuthModal() {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 400) {
           setError(error.response.data.message)
+          return
         }
       }
       setError('Server error. Try again later')

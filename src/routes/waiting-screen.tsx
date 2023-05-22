@@ -59,7 +59,7 @@ export default function WaitingScreen() {
       ) : isError || !data ? (
         <div className="text-red-700">{SERVER_ERROR}</div>
       ) : data.creatorId !== user.user?.id ? (
-        <Navigate to={'/dashboard'} />
+        <Navigate to={'/'} />
       ) : (
         <div className="flex flex-col gap-20">
           <WaitingTime

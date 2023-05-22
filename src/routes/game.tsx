@@ -268,7 +268,7 @@ function ActionPanel(props: ActionPanelProps) {
     )
   }
 
-  const handleExit = () => navigate('/dashboard')
+  const handleExit = () => navigate('/')
 
   return (
     <div className="relative">

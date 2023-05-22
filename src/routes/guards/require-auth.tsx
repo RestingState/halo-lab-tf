@@ -6,7 +6,7 @@ export default function RequireAuth({ children }: PropsWithChildren) {
   const { user } = useUser()
 
   if (!user.isAuthed) {
-    return <Navigate to={'/dashboard'} />
+    return <Navigate to={'/'} />
   }
 
   return <>{children}</>

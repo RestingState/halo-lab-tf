@@ -15,7 +15,7 @@ export default function Root() {
       (error) => {
         if (error.response.status === 401) {
           handleClearUser()
-          navigate('/dashboard')
+          navigate('/')
         }
         return Promise.reject(error)
       }
@@ -36,7 +36,7 @@ export default function Root() {
       }
 
       const handleGameCancel = () => {
-        navigate('/dashboard')
+        navigate('/')
         toast.info('Game was canceled')
       }
 
