@@ -97,7 +97,7 @@ function GameList() {
     <>
       <main className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
         <div className="flex max-h-[60%] max-w-xl flex-col gap-5 bg-slate-50 p-10 py-5">
-          <h1 className="text-center text-2xl">Hello, &#60;username&#62;</h1>
+          <h1 className="text-center text-2xl">Hello, {user.user?.username}</h1>
           {isLoading ? (
             <div className="flex justify-center px-32 py-5">
               <Loader size={100} />
