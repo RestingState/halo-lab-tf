@@ -84,7 +84,9 @@ export default function Game() {
               ) : data.yourTurn ? (
                 <div className="text-green-700">Now it's your turn</div>
               ) : (
-                <div className="text-red-700">Now it's your opponent turn</div>
+                <div className="text-red-700">
+                  Now it's your opponent's turn
+                </div>
               )}
             </h1>
             <div className="grid h-[90%] grid-cols-[1fr_2fr] gap-5">
