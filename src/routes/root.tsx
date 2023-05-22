@@ -17,6 +17,7 @@ export default function Root() {
           handleClearUser()
           navigate('/dashboard')
         }
+        return Promise.reject(error)
       }
     )
 
