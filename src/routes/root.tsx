@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 import { axiosApi } from '~/api/axios'
 import socket from '~/api/socket'
 import useUser from '~/hooks/useUser'
@@ -33,13 +34,20 @@ export default function Root() {
         navigate(`/game/${gameId}`)
       }
 
+      const handleGameCancel = () => {
+        navigate('/dashboard')
+        toast.info('Game was canceled')
+      }
+
       socket.on('gameStarted', handleGameStart)
+      socket.on('gameCanceled', handleGameCancel)
 
       return () => {
         socket.auth = {}
         socket.disconnect()
 
         socket.off('gameStarted', handleGameStart)
+        socket.off('gameCanceled', handleGameCancel)
       }
     }
   }, [user, navigate])

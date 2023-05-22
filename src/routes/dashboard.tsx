@@ -61,6 +61,8 @@ function GameList() {
           'User already plays another game or waits for another game to start'
         ) {
           toast.error("You're already in game")
+        } else if (res.error_message === 'Game is not in pending state') {
+          toast.error('Game is not available anymore')
         } else if (
           res.error_message === 'User already waits for this game to start'
         ) {

@@ -257,10 +257,13 @@ function ActionPanel(props: ActionPanelProps) {
       )
     }
 
-    toast(<ConfirmToast confirm={confirm} />, {
-      autoClose: false,
-      position: 'bottom-center',
-    })
+    toast(
+      <ConfirmToast title="You really want to give up?" confirm={confirm} />,
+      {
+        autoClose: false,
+        position: 'bottom-center',
+      }
+    )
   }
 
   const handleExit = () => navigate('/dashboard')

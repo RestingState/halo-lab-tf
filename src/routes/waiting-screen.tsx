@@ -6,6 +6,9 @@ import Loader from '~/components/loader'
 import { SERVER_ERROR } from '~/constants'
 import useUser from '~/hooks/useUser'
 import { getDateDiff } from '~/lib/date'
+import { toast } from 'react-toastify'
+import ConfirmToast from '~/components/confirm-toast'
+import socket from '~/api/socket'
 
 export default function WaitingScreen() {
   const [waitingTime, setWaitingTime] = useState(new Date())
@@ -26,6 +29,29 @@ export default function WaitingScreen() {
     }
   }, [])
 
+  const handleCancelGame = () => {
+    const confirm = () => {
+      socket.emit(
+        'cancelGame',
+        {
+          gameId: +(gameId as string),
+        },
+        () => toast.error(SERVER_ERROR)
+      )
+    }
+
+    toast(
+      <ConfirmToast
+        title="You really want to cancel game?"
+        confirm={confirm}
+      />,
+      {
+        autoClose: false,
+        position: 'bottom-center',
+      }
+    )
+  }
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center text-2xl">
       {isLoading ? (
@@ -35,10 +61,18 @@ export default function WaitingScreen() {
       ) : data.creatorId !== user.user?.id ? (
         <Navigate to={'/dashboard'} />
       ) : (
-        <WaitingTime
-          waitingTime={waitingTime}
-          createdAt={new Date(data.createdAt)}
-        />
+        <div className="flex flex-col gap-20">
+          <WaitingTime
+            waitingTime={waitingTime}
+            createdAt={new Date(data.createdAt)}
+          />
+          <button
+            className="btn btn-red mx-auto text-lg"
+            onClick={handleCancelGame}
+          >
+            Cancel game
+          </button>
+        </div>
       )}
     </div>
   )
