@@ -1,9 +1,9 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Root from './root'
-import Dashboard from './dashboard'
 import RequireAuth from './guards/require-auth'
-import WaitingScreen from './waiting-screen'
-import Game from './game'
+import WaitingScreen from './pages/waiting-screen/waiting-screen'
+import Dashboard from './pages/dashboard/dashboard'
+import Game from './pages/game/game'
 
 const router = createBrowserRouter([
   {
