@@ -58,7 +58,7 @@ export async function getChatMessages(gameId: number) {
           }
           id: number
           text: string
-          type: 'message'
+          type: 'message' | 'info'
           createdAt: Date
         }[]
       | {

@@ -150,7 +150,11 @@ function Chat(props: ChatProps) {
                         className="grid grid-cols-[max-content_1fr] gap-2"
                       >
                         <div>{timeString}</div>
-                        <div>{`(going ${text})`}</div>
+                        {type === 'command' ? (
+                          <div className="text-blue-700">{`(going ${text})`}</div>
+                        ) : (
+                          <div className="text-orange-500">{text}</div>
+                        )}
                       </div>
                     )
                   }
