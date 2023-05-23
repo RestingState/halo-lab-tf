@@ -1,3 +1,4 @@
+import { Direction } from '~/type'
 import { axiosApi } from './axios'
 
 export async function getAllGamesForWaitingList(queries: {
@@ -50,15 +51,26 @@ export async function getGameForPlay({
 export async function getChatMessages(gameId: number) {
   return (
     await axiosApi.get<
-      {
-        user: {
+      | {
+          user: {
+            id: number
+            username: string
+          }
           id: number
-          username: string
-        }
-        id: number
-        text: string
-        createdAt: Date
-      }[]
+          text: string
+          type: 'message'
+          createdAt: Date
+        }[]
+      | {
+          user: {
+            id: number
+            username: string
+          }
+          id: number
+          text: Direction
+          type: 'command'
+          createdAt: Date
+        }[]
     >(`/game/${gameId}/chat_messages`)
   ).data
 }
