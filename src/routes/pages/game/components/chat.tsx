@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { z } from 'zod'
@@ -28,6 +28,7 @@ function Chat(props: ChatProps) {
     queryFn: () => getChatMessages(+(gameId as string)),
   })
   const [text, setText] = useState('')
+  const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleMessageReceive = (message: ReceiveMessageReceivedResponse) => {
@@ -43,6 +44,17 @@ function Chat(props: ChatProps) {
       socket.off('messageReceived', handleMessageReceive)
     }
   }, [queryClient])
+
+  useEffect(() => {
+    if (
+      bottomRef.current &&
+      data &&
+      data.length &&
+      data[data.length - 1].user.id === user.user!.id
+    ) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [data, user.user])
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -113,32 +125,37 @@ function Chat(props: ChatProps) {
           ) : isError || !data ? (
             <div className="text-center text-red-700">{SERVER_ERROR}</div>
           ) : (
-            [...data].reverse().map(({ id, text, createdAt, user, type }) => {
-              const timeString = getTimeString(new Date(createdAt))
+            <>
+              <div ref={bottomRef} />
+              {[...data]
+                .reverse()
+                .map(({ id, text, createdAt, user, type }) => {
+                  const timeString = getTimeString(new Date(createdAt))
 
-              if (type === 'message') {
-                return (
-                  <div
-                    key={id}
-                    className="grid grid-cols-[max-content_100px_2fr] gap-2"
-                  >
-                    <div>{timeString}</div>
-                    <div className="truncate">{`${user.username}:`}</div>
-                    <div>{text}</div>
-                  </div>
-                )
-              } else {
-                return (
-                  <div
-                    key={id}
-                    className="grid grid-cols-[max-content_1fr] gap-2"
-                  >
-                    <div>{timeString}</div>
-                    <div>{`(going ${text})`}</div>
-                  </div>
-                )
-              }
-            })
+                  if (type === 'message') {
+                    return (
+                      <div
+                        key={id}
+                        className="grid grid-cols-[max-content_100px_2fr] gap-2"
+                      >
+                        <div>{timeString}</div>
+                        <div className="truncate">{`${user.username}:`}</div>
+                        <div>{text}</div>
+                      </div>
+                    )
+                  } else {
+                    return (
+                      <div
+                        key={id}
+                        className="grid grid-cols-[max-content_1fr] gap-2"
+                      >
+                        <div>{timeString}</div>
+                        <div>{`(going ${text})`}</div>
+                      </div>
+                    )
+                  }
+                })}
+            </>
           )}
         </div>
       </div>
